@@ -11,7 +11,7 @@ namespace EmergencyServicesBot.Services
         {
             return String.Format("Id {0} found", id);
         }
-        public static int Register(string id, DateTime date)
+        public static int Register(int id, DateTime date)
         {
             return 100;
         }
@@ -21,14 +21,39 @@ namespace EmergencyServicesBot.Services
             {
                 return "Nilanjan";
             }
+            else if (id == 69135)
+            {
+                return "Satish";
+            }
             else
             {
                 return null;
             }
         }
 
-        public static List<DateTime> GetDates() {
-            return new List<DateTime>() { DateTime.Now , DateTime.Now.AddDays(1), DateTime.Now.AddDays(2), DateTime.Now.AddDays(3), DateTime.Now.AddDays(4) };
+        public static List<DateTime> GetDates()
+        {
+            return new List<DateTime>() { DateTime.Now, DateTime.Now.AddDays(1), DateTime.Now.AddDays(2), DateTime.Now.AddDays(3), DateTime.Now.AddDays(4) };
+        }
+        public static DateTime? GetRegistration(int callerId)
+        {
+            return null;
+        }
+
+        public static DateTime? GetUserRegistrationDate(int? callerId)
+        {
+            if (callerId == 69135)
+            {
+                return DateTime.Now;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public static bool CancelRegistration(int callerId) {
+            return true;
         }
     }
 }
