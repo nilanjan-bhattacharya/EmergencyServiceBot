@@ -136,15 +136,13 @@
                 spokenText = await this.GetTextFromAudioAsync(record);
 
                 var intentRecieved = await MicrosoftCognitiveSpeechService.SendToLUISViaAPI(spokenText);
-                
+
                 Intent luisIntent = JsonConvert.DeserializeObject<Intent>(intentRecieved);
 
-                var rootIntent = rootIntentActiveState.Values.All(a => a == false)? RootIntentFinder(luisIntent) : rootIntentActiveState.Where(a=>a.Value == true).FirstOrDefault().Key;
+                var rootIntent = rootIntentActiveState.Values.All(a => a == false) ? RootIntentFinder(luisIntent) : rootIntentActiveState.Where(a => a.Value == true).FirstOrDefault().Key;
 
                 var callState = this.callStateMap[recordOutcomeEvent.ConversationResult.Id];
-
-                //await this.SendSTTResultToUser("We detected the following audio: " + spokenText, callState.Participants);
-                //await this.SendSTTResultToUser("LUIS Intent: " + intentRecieved, callState.Participants);
+                
 
                 if (!luisIntent.topScoringIntent.intent.Equals("Exit", StringComparison.InvariantCultureIgnoreCase) || rootIntentActiveState.Values.Contains(true))
                 {
@@ -177,7 +175,7 @@
                     }
                     else
                     {
-                        if (rootIntentActiveState.Values.All(a=>a == false) && !rootIntentActiveState[rootIntent])
+                        if (rootIntentActiveState.Values.All(a => a == false) && !rootIntentActiveState[rootIntent])
                         {
                             HandleRootIntent(rootIntent, recordOutcomeEvent.ResultingWorkflow);
                         }
@@ -190,27 +188,33 @@
                                     {
                                         var dates = BotStubs.GetDates();
 
-                                        //var ent = luisIntent.entities[0].resolution.values.FirstOrDefault().value;
                                         String DateAcceptance = String.Format("Following dates are available for registration" +
-                                            "1. {0} 2. {0} 3. {0}, Please choose the number",dates[0].ToString(), dates[1].ToString()
+                                            "First. {0} Second. {0} Third. {0}, Please choose the number", dates[0].ToString(), dates[1].ToString()
                                             , dates[3].ToString());
 
-                                         SetupRecording(recordOutcomeEvent.ResultingWorkflow, DateAcceptance);
+                                        SetupRecording(recordOutcomeEvent.ResultingWorkflow, DateAcceptance);
 
-                                        if (spokenText.Contains("1") || spokenText.ToLower().Contains("one") || spokenText.Contains("3"))
+                                        int dateChoiceIndex = spokenText.ToLower().Contains("first") ? 0 : spokenText.ToLower().Contains("second") ? 1 : spokenText.ToLower().Contains("third") ? 2 : -1;
+                                        if (dateChoiceIndex >= 0)
                                         {
-                                            var selectedDate = dates[0];
-                                            var registrationId = BotStubs.Register(callerId.Value,selectedDate);
+                                            var selectedDate = dates[dateChoiceIndex];
+                                            var registrationId = BotStubs.Register(callerId.Value, selectedDate);
 
                                             await this.SendSTTResultToUser(String.Format("Registration Booked successfully on {0}," +
-                                                " Registration Id is {1}",selectedDate,registrationId), callState.Participants);
+                                                " Registration Id is {1}", selectedDate, registrationId), callState.Participants);
                                             rootIntentActiveState[RootIntent.REGISTER] = false;
 
-                                            //SetupRecording(recordOutcomeEvent.ResultingWorkflow, "Registration Successful. You chose " + spokenText +
-                                            //    "Please say any other activity you want to perform");
-                                            HangUpCall(recordOutcomeEvent, String.Format("Registration Booked successfully on { 0}," +
-                                                " Registration Id is {1}. Thanks for using Bot",selectedDate,registrationId));
 
+                                            recordOutcomeEvent.ResultingWorkflow.Actions = new List<ActionBase>
+                                            {
+                                                GetPromptForText(String.Format("Registration Booked successfully on {0}," +
+                                                " Registration Id is {1}. Thank you for using the service.", selectedDate, registrationId)),
+                                                new Hangup { OperationId = Guid.NewGuid().ToString() }
+
+                                            };
+                                            callerId = null;
+                                            recordOutcomeEvent.ResultingWorkflow.Links = null;
+                                            this.callStateMap.Remove(recordOutcomeEvent.ConversationResult.Id);
 
                                         }
 
@@ -222,11 +226,12 @@
                                         var dates = BotStubs.GetDates();
 
                                         String DateAcceptance = String.Format("Following dates are available for reschedule" +
-                                            "1. {0} 2. {0} 3. {0}, Please choose the number", dates[0].ToString(), dates[1].ToString()
+                                            "First. {0} Second. {0} Third. {0}, Please choose the number", dates[0].ToString(), dates[1].ToString()
                                             , dates[3].ToString());
                                         SetupRecording(recordOutcomeEvent.ResultingWorkflow, DateAcceptance);
 
-                                        if (spokenText.Contains("1") || spokenText.ToLower().Contains("one") || spokenText.Contains("3"))
+                                        int dateChoiceIndex = spokenText.ToLower().Contains("first") ? 0 : spokenText.ToLower().Contains("second") ? 1 : spokenText.ToLower().Contains("third") ? 2 : -1;
+                                        if (dateChoiceIndex >= 0)
                                         {
 
                                             var selectedDate = dates[0];
@@ -237,15 +242,18 @@
 
                                             rootIntentActiveState[RootIntent.RESCHEDULE] = false;
 
-                                            //SetupRecording(recordOutcomeEvent.ResultingWorkflow, "Registration Successful. You chose " + spokenText +
-                                            //    "Please say any other activity you want to perform");
-                                            HangUpCall(recordOutcomeEvent, String.Format("Registration rescheduled successfully on { 0}," +
-                                                " Registration Id is {1}. Thanks for using Bot", selectedDate, registrationId));
+                                            recordOutcomeEvent.ResultingWorkflow.Actions = new List<ActionBase>
+                                            {
+                                                GetPromptForText(String.Format("Registration rescheduled successfully on {0}," +
+                                                " Registration Id is {1}. Thank you for using the service.", selectedDate, registrationId)),
+                                                new Hangup { OperationId = Guid.NewGuid().ToString() }
+
+                                            };
+                                            callerId = null;
+                                            recordOutcomeEvent.ResultingWorkflow.Links = null;
+                                            this.callStateMap.Remove(recordOutcomeEvent.ConversationResult.Id);
                                         }
-                                        //else
-                                        //{
-                                        //   // SetupRecording(recordOutcomeEvent.ResultingWorkflow, "Unable to register.");
-                                        //}
+
                                     }
                                     break;
                                 case RootIntent.CANCEL:
@@ -254,11 +262,21 @@
                                         rootIntentActiveState[RootIntent.CANCEL] = false;
                                         if (BotStubs.CancelRegistration(callerId.Value))
                                         {
-                                            //SetupRecording(recordOutcomeEvent.ResultingWorkflow, "Registration Cancelled successful. You chose " + spokenText +
-                                            //       "Please say any other activity you want to perform");
+
                                             var cancelStatus = BotStubs.CancelRegistration(callerId.Value);
-                                            if(cancelStatus)
-                                                HangUpCall(recordOutcomeEvent, "Registration Cancelled successfully. Thanks for using emergency bot");
+                                            if (cancelStatus)
+                                            {
+                                                recordOutcomeEvent.ResultingWorkflow.Actions = new List<ActionBase>
+                                                {
+                                                    GetPromptForText("Registration cancelled successfully. Thank you for using the service."),
+                                                    new Hangup { OperationId = Guid.NewGuid().ToString() }
+
+                                                };
+                                                callerId = null;
+                                                recordOutcomeEvent.ResultingWorkflow.Links = null;
+                                                this.callStateMap.Remove(recordOutcomeEvent.ConversationResult.Id);
+
+                                            }
 
                                         }
                                         else
@@ -432,7 +450,8 @@
             //}
         }
 
-        private void HangUpCall(RecordOutcomeEvent recordOutcomeEvent, string hangupMessage) {
+        private void HangUpCall(RecordOutcomeEvent recordOutcomeEvent, string hangupMessage)
+        {
             recordOutcomeEvent.ResultingWorkflow.Actions = new List<ActionBase>
                     {
                         GetPromptForText(hangupMessage),
