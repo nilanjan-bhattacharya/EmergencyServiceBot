@@ -234,7 +234,7 @@
                                         if (dateChoiceIndex >= 0)
                                         {
 
-                                            var selectedDate = dates[0];
+                                            var selectedDate = dates[dateChoiceIndex];
                                             var registrationId = BotStubs.Register(callerId.Value, selectedDate);
 
                                             await this.SendSTTResultToUser(String.Format("Registration Rescheduled successfully on {0}," +
